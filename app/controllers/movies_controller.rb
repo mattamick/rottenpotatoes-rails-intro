@@ -12,6 +12,53 @@ class MoviesController < ApplicationController
 
   def index
     @movies = Movie.all
+    @all_ratings = Movie.uniq.pluck(:rating)
+    @checked_ratings=['','']
+
+    # If no filters, check all on index.
+    if session[:ratings] == nil
+      @checked_ratings = ['PG-13', 'PG', 'G', 'R']
+    end
+
+
+    if params[:ratings] == nil && session[:ratings] != nil
+      if params[:sort_by] == nil
+        redirect_to movies_path(ratings: session[:ratings], sort_by: session[:sort_by]) and return
+      else
+        redirect_to movies_path(ratings: session[:ratings], sort_by: params[:sort_by]) and return
+      end
+    end
+
+    if session[:ratings] != params[:ratings] && params[:ratings] != nil
+      selected_ratings = params[:ratings]
+      session[:ratings] = params[:ratings]
+    else
+      selected_ratings = session[:ratings]
+    end
+
+    #select movies based on filter
+    if selected_ratings != nil
+      @checked_ratings = selected_ratings.keys
+      @movies = Movie.all.select {|m| @checked_ratings.include?(m.rating)}
+    end
+
+    # sorting and highlight the sorted column
+    @hilite = ['','']
+
+
+    if params[:sort_by] == nil && session[:sort_by] != nil
+      redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings])
+    else
+      if params[:sort_by] == "title"
+        @movies = @movies.sort {|a, b| a.title.downcase <=> b.title.downcase}
+        @hilite[0] = 'hilite'
+        session[:sort_by] = 'title'
+      elsif params[:sort_by] == "release_date"
+       @movies = @movies.sort {|a,b| a.release_date <=> b.release_date}
+       @hilite[1] = 'hilite'
+       session[:sort_by] = 'release_date'
+      end
+    end
   end
 
   def new
